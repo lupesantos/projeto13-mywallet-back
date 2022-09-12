@@ -180,15 +180,14 @@ server.get('/extrato', async (req, res) => {
 	}
 });
 
-server.put('/delete', async (req, res) => {
+server.delete('/delete', async (req, res) => {
 	const token = req.headers.authorization?.replace('Bearer ', '');
 	const user = await db.collection('sessions').find().toArray();
 
-	let usuario = user.filter((value) => value.token === token);
-
-	const { _id: id } = usuario[0];
+	let usuario = await user.filter((value) => value.token === token);
 
 	try {
+		const { _id: id } = usuario[0];
 		await db.collection('sessions').deleteOne({ _id: id });
 		res.send('ok');
 	} catch (error) {
