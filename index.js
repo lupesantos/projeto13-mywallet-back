@@ -39,14 +39,13 @@ const innOutSchema = Joi.object({
 server.post('/cadastro', async (req, res) => {
 	const user = req.body;
 	const passwordHash = bcrypt.hashSync(user.password, 10);
-
-	console.log(user.password);
-	console.log(passwordHash);
-
 	const validation = usuarioSchema.validate(user, { abortEarly: false });
 
 	if (validation.error) {
-		const errors = validation.error.details.map((value) => value.message);
+		const errors = validation.error.details
+			.map((value) => value.message)
+			.join(',')
+			.replace('[ref:password]', 'equal to password');
 		return res.status(422).send(errors);
 	}
 
@@ -106,10 +105,9 @@ server.post('/nova-entrada', async (req, res) => {
 
 	try {
 		const token = req.headers.authorization?.replace('Bearer ', '');
-		console.log(token);
+		let now = dayjs();
 
 		const user = await db.collection('sessions').findOne({ token: token });
-		console.log(user);
 		if (!user) {
 			res.sendStatus(401);
 		} else {
@@ -118,6 +116,7 @@ server.post('/nova-entrada', async (req, res) => {
 				type: 'entrada',
 				valor: entrada.valor,
 				descricao: entrada.descricao,
+				dia: now.format('DD/MM'),
 			});
 			res.status(201).send(entrada);
 		}
@@ -138,10 +137,11 @@ server.post('/nova-saida', async (req, res) => {
 
 	try {
 		const token = req.headers.authorization?.replace('Bearer ', '');
-		console.log(token);
+
+		let now = dayjs();
 
 		const user = await db.collection('sessions').findOne({ token: token });
-		console.log(user);
+
 		if (!user) {
 			res.sendStatus(401);
 		} else {
@@ -150,6 +150,7 @@ server.post('/nova-saida', async (req, res) => {
 				type: 'saida',
 				valor: saida.valor,
 				descricao: saida.descricao,
+				dia: now.format('DD/MM'),
 			});
 			res.status(201).send(saida);
 		}
@@ -161,11 +162,9 @@ server.post('/nova-saida', async (req, res) => {
 server.get('/extrato', async (req, res) => {
 	const token = req.headers.authorization?.replace('Bearer ', '');
 
-	console.log(token);
-
 	try {
 		const user = await db.collection('sessions').findOne({ token: token });
-		console.log(user);
+
 		if (!user) {
 			res.sendStatus(401);
 		} else {
@@ -178,6 +177,23 @@ server.get('/extrato', async (req, res) => {
 		}
 	} catch (error) {
 		console.log(error);
+	}
+});
+
+server.put('/delete', async (req, res) => {
+	const token = req.headers.authorization?.replace('Bearer ', '');
+	const user = await db.collection('sessions').find().toArray();
+
+	let usuario = user.filter((value) => value.token === token);
+
+	const { _id: id } = usuario;
+
+	try {
+		await db.collection('sessions').deleteOne({ _id: id });
+		res.send('ok');
+	} catch (error) {
+		console.log(error);
+		res.sendStatus(500);
 	}
 });
 
