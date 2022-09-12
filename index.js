@@ -186,7 +186,7 @@ server.put('/delete', async (req, res) => {
 
 	let usuario = user.filter((value) => value.token === token);
 
-	const { _id: id } = usuario;
+	const { _id: id } = usuario[0];
 
 	try {
 		await db.collection('sessions').deleteOne({ _id: id });
